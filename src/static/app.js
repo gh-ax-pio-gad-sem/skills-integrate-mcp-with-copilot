@@ -15,21 +15,85 @@ document.addEventListener("DOMContentLoaded", () => {
 
   let authToken = localStorage.getItem("authToken");
   let currentUser = null;
+  let lastFocusedElement = null;
+
+  // Get all focusable elements within the modal
+  function getFocusableElements(element) {
+    return element.querySelectorAll(
+      'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])'
+    );
+  }
+
+  // Trap focus within modal
+  function trapFocus(event) {
+    const focusableElements = getFocusableElements(loginModal);
+    const firstElement = focusableElements[0];
+    const lastElement = focusableElements[focusableElements.length - 1];
+
+    if (event.key === 'Tab') {
+      if (event.shiftKey) {
+        // Shift + Tab
+        if (document.activeElement === firstElement) {
+          event.preventDefault();
+          lastElement.focus();
+        }
+      } else {
+        // Tab
+        if (document.activeElement === lastElement) {
+          event.preventDefault();
+          firstElement.focus();
+        }
+      }
+    }
+
+    // Close modal on Escape key
+    if (event.key === 'Escape') {
+      closeLoginModal();
+    }
+  }
+
+  // Open modal
+  function openLoginModal() {
+    lastFocusedElement = document.activeElement;
+    loginModal.classList.remove("hidden");
+    
+    // Focus first input element
+    const firstInput = loginModal.querySelector('input:not([disabled])');
+    if (firstInput) {
+      firstInput.focus();
+    }
+    
+    // Add event listener for focus trap
+    loginModal.addEventListener('keydown', trapFocus);
+  }
+
+  // Close modal
+  function closeLoginModal() {
+    loginModal.classList.add("hidden");
+    loginMessage.classList.add("hidden");
+    
+    // Remove event listener for focus trap
+    loginModal.removeEventListener('keydown', trapFocus);
+    
+    // Return focus to last focused element
+    if (lastFocusedElement) {
+      lastFocusedElement.focus();
+      lastFocusedElement = null;
+    }
+  }
 
   // Modal handling
   loginBtn.addEventListener("click", () => {
-    loginModal.classList.remove("hidden");
+    openLoginModal();
   });
 
   closeModal.addEventListener("click", () => {
-    loginModal.classList.add("hidden");
-    loginMessage.classList.add("hidden");
+    closeLoginModal();
   });
 
   window.addEventListener("click", (event) => {
     if (event.target === loginModal) {
-      loginModal.classList.add("hidden");
-      loginMessage.classList.add("hidden");
+      closeLoginModal();
     }
   });
 
@@ -59,7 +123,7 @@ document.addEventListener("DOMContentLoaded", () => {
         localStorage.setItem("authToken", authToken);
         currentUser = result.user;
         
-        loginModal.classList.add("hidden");
+        closeLoginModal();
         loginForm.reset();
         updateUIForUser();
         fetchActivities();
